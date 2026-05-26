@@ -45,7 +45,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="w-8 h-8 rounded bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground">
             E
           </div>
-          E-Aduan
+          e-Aduan
         </h1>
         <p className="text-xs text-sidebar-foreground/60 mt-1 uppercase tracking-wider font-semibold">Smart Management System</p>
       </div>
@@ -108,7 +108,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
             
-            <div className="md:hidden font-semibold">E-Aduan</div>
+            <div className="md:hidden font-semibold">e-Aduan</div>
           </div>
 
           <div className="flex items-center gap-3">

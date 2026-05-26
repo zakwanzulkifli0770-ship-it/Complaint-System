@@ -42,7 +42,7 @@ export default function Register() {
           setLocation("/dashboard");
           toast({
             title: "Account created",
-            description: "Welcome to E-Aduan.",
+            description: "Welcome to e-Aduan.",
           });
         },
         onError: (error) => {
@@ -64,7 +64,7 @@ export default function Register() {
             <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground">
               <Building2 className="w-5 h-5" />
             </div>
-            E-Aduan
+            e-Aduan
           </div>
 
           <Card className="border-0 shadow-none bg-transparent sm:border sm:shadow-sm sm:bg-card">
@@ -137,7 +137,7 @@ export default function Register() {
       <div className="hidden md:flex flex-col bg-sidebar text-sidebar-foreground justify-between p-12 relative overflow-hidden">
         <div className="relative z-10 flex flex-col items-end text-right">
           <div className="flex items-center justify-end gap-3 font-bold text-2xl mb-6">
-            E-Aduan
+            e-Aduan
             <div className="w-10 h-10 rounded bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground">
               <Building2 className="w-6 h-6" />
             </div>
