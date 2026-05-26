@@ -42,7 +42,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border text-sidebar-foreground">
       <div className="p-6">
         <h1 className="text-xl font-bold text-sidebar-primary tracking-tight flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground">
+          <div className="w-8 h-8 rounded bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground flex-row">
             E
           </div>
           e-Aduan
@@ -72,7 +72,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="px-3 py-2">
           <div className="font-medium truncate">{user?.username}</div>
           <div className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</div>
-          <div className="text-xs mt-1 inline-block bg-sidebar-accent px-2 py-0.5 rounded text-sidebar-accent-foreground uppercase tracking-wider font-semibold border border-sidebar-border">
+          <div className="text-xs mt-1 inline-block px-2 py-0.5 rounded text-sidebar-accent-foreground uppercase tracking-wider font-semibold border border-sidebar-border bg-[#7599eb]">
             {user?.role}
           </div>
         </div>
