@@ -1,0 +1,213 @@
+Bina sebuah sistem web E-Aduan moden dan profesional menggunakan:
+
+Frontend: HTML, TailwindCSS, JavaScript
+Backend: Node.js + Express.js
+Database: PostgreSQL (atau SQLite jika local)
+Authentication: JWT Session Login
+Hosting compatible dengan Replit
+Responsive design untuk desktop & mobile
+Struktur fail kemas dan scalable
+
+Nama sistem:
+E-Aduan Smart Management System
+
+Tema:
+Minimalist modern UI, warna biru gelap + putih + accent cyan.
+Design corporate seperti dashboard kerajaan / universiti moden.
+
+FUNCTION UTAMA
+1. AUTH SYSTEM
+Admin
+Login admin
+Secure password hashing menggunakan bcrypt
+Session/JWT authentication
+Logout function
+Pengguna
+Register account
+Login account
+Reset password basic
+Profile page
+2. DASHBOARD PENGGUNA
+
+Paparkan:
+
+Jumlah aduan dihantar
+Status aduan:
+Dalam Proses
+Selesai
+Ditolak
+Recent activity
+Notifikasi
+
+Dashboard mesti interactive dan smooth animation.
+
+3. SISTEM HANTAR ADUAN
+
+Form aduan lengkap:
+
+Nama
+No Telefon
+Email
+Kategori aduan
+Lokasi
+Tajuk aduan
+Keterangan penuh
+Upload gambar
+Tarikh automatik
+Priority level:
+Rendah
+Sederhana
+Kritikal
+
+Selepas submit:
+
+Generate nombor tiket automatik
+Simpan dalam database
+Papar success message moden
+4. STATUS TRACKING
+
+Pengguna boleh:
+
+Semak status aduan
+Cari menggunakan nombor tiket
+Lihat timeline progress
+
+Contoh timeline:
+
+Aduan diterima
+Sedang disemak
+Dalam tindakan
+Selesai
+5. ADMIN PANEL
+
+Admin dashboard mesti ada:
+
+Statistik
+Jumlah aduan
+Aduan hari ini
+Aduan selesai
+Aduan tertunggak
+Carta analytics
+Pengurusan Aduan
+View semua aduan
+Filter ikut kategori/status
+Search function
+Update status
+Tambah komen admin
+Delete aduan
+Pengurusan User
+Senarai pengguna
+Ban/delete user
+Edit role
+6. NOTIFICATION SYSTEM
+Email notification basic
+Toast notification
+Real-time style update UI
+7. SECURITY
+
+Pastikan sistem:
+
+SQL Injection protection
+XSS protection
+Rate limiting
+Helmet security middleware
+Input validation
+File upload validation
+8. FILE STRUCTURE
+
+Gunakan struktur professional:
+
+/client
+/server
+/routes
+/controllers
+/models
+/middleware
+/uploads
+/public
+
+9. DATABASE STRUCTURE
+
+Table users:
+
+id
+username
+email
+password
+role
+created_at
+
+Table complaints:
+
+id
+ticket_id
+user_id
+category
+title
+description
+status
+priority
+image
+created_at
+
+Table comments:
+
+id
+complaint_id
+admin_id
+comment
+created_at
+10. EXTRA FEATURES
+
+Tambah:
+
+Dark mode
+Export PDF
+Print complaint
+Mobile responsive sidebar
+Pagination
+Search animation
+Loading skeleton
+Empty state UI
+Error page 404
+Beautiful login page
+11. UI STYLE
+
+Design mesti:
+
+Sangat moden
+Smooth transition
+Glassmorphism ringan
+Dashboard aesthetic
+Icon menggunakan Lucide Icons
+Card style clean
+Tidak nampak template murah
+12. API
+
+Bina REST API lengkap:
+
+CRUD Aduan
+Auth API
+Admin API
+Search API
+
+Gunakan standard response JSON.
+
+13. FINAL REQUIREMENT
+
+Pastikan:
+
+Semua function berjalan
+Tiada dummy button
+Code clean
+Comment penting sahaja
+Ready untuk deploy di Replit
+Sertakan .env.example
+Sertakan README setup lengkap
+
+Akhir sekali:
+
+Generate semua file project
+Generate sample database
+Generate setup command
+Generate deployment guide Replit
