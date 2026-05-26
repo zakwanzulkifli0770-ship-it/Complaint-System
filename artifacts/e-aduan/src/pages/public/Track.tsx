@@ -95,7 +95,7 @@ export default function Track() {
 
   const { data: complaint, isLoading, isError, error } = useGetComplaintByTicket(
     searchedTicketId || "",
-    { query: { enabled: !!searchedTicketId, retry: false } }
+    { query: { enabled: !!searchedTicketId, retry: false } as any }
   );
 
   const onSubmit = (values: z.infer<typeof searchSchema>) => {

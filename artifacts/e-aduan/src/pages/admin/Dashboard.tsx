@@ -7,7 +7,8 @@ import {
   FileText, Clock, PlayCircle, CheckCircle2, XCircle, Users, Activity
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadingState } from "@/components/shared/LoadingState";
+import { AdminDashboardSkeleton } from "@/components/shared/Skeletons";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -20,7 +21,7 @@ export default function AdminDashboard() {
   const { data: categories, isLoading: catLoading } = useGetStatsByCategory();
   const { data: trends, isLoading: trendLoading } = useGetComplaintTrend();
 
-  if (statsLoading || catLoading || trendLoading) return <LoadingState message="Loading dashboard statistics..." />;
+  if (statsLoading || catLoading || trendLoading) return <AdminDashboardSkeleton />;
   if (!stats) return null;
 
   const statCards = [
@@ -35,10 +36,10 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Admin Overview</h2>
-        <p className="text-muted-foreground">System-wide complaint statistics and metrics.</p>
-      </div>
+      <PageHeader
+        title="Admin Overview"
+        description="System-wide complaint statistics and metrics."
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
         {statCards.map((stat, i) => (
@@ -63,18 +64,20 @@ export default function AdminDashboard() {
             {trends && trends.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="date" tick={{fontSize: 12}} tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tick={{fontSize: 12}} tickLine={false} axisLine={false} />
-                  <RechartsTooltip 
-                    cursor={{fill: 'rgba(0,0,0,0.05)'}}
-                    contentStyle={{borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}} 
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
+                  <XAxis dataKey="date" tick={{fontSize: 11}} tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tick={{fontSize: 11}} tickLine={false} axisLine={false} />
+                  <RechartsTooltip
+                    cursor={{fill: 'rgba(0,0,0,0.04)'}}
+                    contentStyle={{borderRadius: '8px', fontSize: '12px'}}
                   />
                   <Bar dataKey="count" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">No trend data available</div>
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                No trend data available yet
+              </div>
             )}
           </CardContent>
         </Card>
@@ -92,23 +95,25 @@ export default function AdminDashboard() {
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
-                    outerRadius={100}
+                    outerRadius={95}
                     paddingAngle={2}
                     dataKey="count"
                     nameKey="category"
                   >
-                    {categories.map((entry, index) => (
+                    {categories.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <RechartsTooltip 
-                    contentStyle={{borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}
+                  <RechartsTooltip
+                    contentStyle={{borderRadius: '8px', fontSize: '12px'}}
                   />
-                  <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{fontSize: '12px'}} />
+                  <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{fontSize: '11px'}} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">No category data available</div>
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                No category data available yet
+              </div>
             )}
           </CardContent>
         </Card>

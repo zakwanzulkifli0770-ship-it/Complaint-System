@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, complaintsTable, usersTable } from "@workspace/db";
-import { eq, desc, and, like, or, count, sql } from "drizzle-orm";
+import { eq, desc, and, ilike, or, count } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middlewares/auth";
 import {
   CreateComplaintBody,
@@ -15,6 +15,32 @@ import { commentsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
+const COMPLAINT_FIELDS = {
+  id: complaintsTable.id,
+  ticketId: complaintsTable.ticketId,
+  userId: complaintsTable.userId,
+  category: complaintsTable.category,
+  title: complaintsTable.title,
+  description: complaintsTable.description,
+  status: complaintsTable.status,
+  priority: complaintsTable.priority,
+  location: complaintsTable.location,
+  phone: complaintsTable.phone,
+  imageUrl: complaintsTable.imageUrl,
+  createdAt: complaintsTable.createdAt,
+  updatedAt: complaintsTable.updatedAt,
+  username: usersTable.username,
+};
+
+const COMMENT_FIELDS = {
+  id: commentsTable.id,
+  complaintId: commentsTable.complaintId,
+  adminId: commentsTable.adminId,
+  comment: commentsTable.comment,
+  createdAt: commentsTable.createdAt,
+  adminUsername: usersTable.username,
+};
+
 function generateTicketId(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "ADU-";
@@ -27,7 +53,7 @@ function generateTicketId(): string {
 router.get("/complaints", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const query = ListComplaintsQueryParams.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: query.error.message });
+    res.status(400).json({ error: "Invalid query parameters" });
     return;
   }
 
@@ -44,42 +70,26 @@ router.get("/complaints", requireAuth, async (req: AuthRequest, res): Promise<vo
   if (search) {
     conditions.push(
       or(
-        like(complaintsTable.title, `%${search}%`),
-        like(complaintsTable.ticketId, `%${search}%`),
-      )
+        ilike(complaintsTable.title, `%${search}%`),
+        ilike(complaintsTable.ticketId, `%${search}%`),
+        ilike(complaintsTable.category, `%${search}%`),
+      ),
     );
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const [{ total }] = await db
-    .select({ total: count() })
-    .from(complaintsTable)
-    .where(whereClause);
-
-  const rows = await db
-    .select({
-      id: complaintsTable.id,
-      ticketId: complaintsTable.ticketId,
-      userId: complaintsTable.userId,
-      category: complaintsTable.category,
-      title: complaintsTable.title,
-      description: complaintsTable.description,
-      status: complaintsTable.status,
-      priority: complaintsTable.priority,
-      location: complaintsTable.location,
-      phone: complaintsTable.phone,
-      imageUrl: complaintsTable.imageUrl,
-      createdAt: complaintsTable.createdAt,
-      updatedAt: complaintsTable.updatedAt,
-      username: usersTable.username,
-    })
-    .from(complaintsTable)
-    .leftJoin(usersTable, eq(complaintsTable.userId, usersTable.id))
-    .where(whereClause)
-    .orderBy(desc(complaintsTable.createdAt))
-    .limit(limit)
-    .offset(offset);
+  const [[{ total }], rows] = await Promise.all([
+    db.select({ total: count() }).from(complaintsTable).where(whereClause),
+    db
+      .select(COMPLAINT_FIELDS)
+      .from(complaintsTable)
+      .leftJoin(usersTable, eq(complaintsTable.userId, usersTable.id))
+      .where(whereClause)
+      .orderBy(desc(complaintsTable.createdAt))
+      .limit(limit)
+      .offset(offset),
+  ]);
 
   res.json({ complaints: rows, total, page, limit });
 });
@@ -87,54 +97,42 @@ router.get("/complaints", requireAuth, async (req: AuthRequest, res): Promise<vo
 router.post("/complaints", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const parsed = CreateComplaintBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: "Invalid request body" });
     return;
   }
 
   let ticketId = generateTicketId();
-  let attempts = 0;
-  while (attempts < 5) {
-    const [existing] = await db.select().from(complaintsTable).where(eq(complaintsTable.ticketId, ticketId));
+  for (let attempts = 0; attempts < 5; attempts++) {
+    const [existing] = await db
+      .select({ id: complaintsTable.id })
+      .from(complaintsTable)
+      .where(eq(complaintsTable.ticketId, ticketId));
     if (!existing) break;
     ticketId = generateTicketId();
-    attempts++;
   }
 
-  const [complaint] = await db.insert(complaintsTable).values({
-    ...parsed.data,
-    ticketId,
-    userId: req.user!.id,
-  }).returning();
+  const [complaint] = await db
+    .insert(complaintsTable)
+    .values({ ...parsed.data, ticketId, userId: req.user!.id })
+    .returning();
 
-  const user = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, req.user!.id));
+  const [user] = await db
+    .select({ username: usersTable.username })
+    .from(usersTable)
+    .where(eq(usersTable.id, req.user!.id));
 
-  res.status(201).json({ ...complaint, username: user[0]?.username ?? null });
+  res.status(201).json({ ...complaint, username: user?.username ?? null });
 });
 
 router.get("/complaints/ticket/:ticketId", async (req, res): Promise<void> => {
   const params = GetComplaintByTicketParams.safeParse(req.params);
   if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+    res.status(400).json({ error: "Invalid ticket ID" });
     return;
   }
 
   const [complaint] = await db
-    .select({
-      id: complaintsTable.id,
-      ticketId: complaintsTable.ticketId,
-      userId: complaintsTable.userId,
-      category: complaintsTable.category,
-      title: complaintsTable.title,
-      description: complaintsTable.description,
-      status: complaintsTable.status,
-      priority: complaintsTable.priority,
-      location: complaintsTable.location,
-      phone: complaintsTable.phone,
-      imageUrl: complaintsTable.imageUrl,
-      createdAt: complaintsTable.createdAt,
-      updatedAt: complaintsTable.updatedAt,
-      username: usersTable.username,
-    })
+    .select(COMPLAINT_FIELDS)
     .from(complaintsTable)
     .leftJoin(usersTable, eq(complaintsTable.userId, usersTable.id))
     .where(eq(complaintsTable.ticketId, params.data.ticketId));
@@ -145,14 +143,7 @@ router.get("/complaints/ticket/:ticketId", async (req, res): Promise<void> => {
   }
 
   const comments = await db
-    .select({
-      id: commentsTable.id,
-      complaintId: commentsTable.complaintId,
-      adminId: commentsTable.adminId,
-      comment: commentsTable.comment,
-      createdAt: commentsTable.createdAt,
-      adminUsername: usersTable.username,
-    })
+    .select(COMMENT_FIELDS)
     .from(commentsTable)
     .leftJoin(usersTable, eq(commentsTable.adminId, usersTable.id))
     .where(eq(commentsTable.complaintId, complaint.id))
@@ -165,27 +156,12 @@ router.get("/complaints/:id", requireAuth, async (req: AuthRequest, res): Promis
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = GetComplaintParams.safeParse({ id: parseInt(raw, 10) });
   if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+    res.status(400).json({ error: "Invalid complaint ID" });
     return;
   }
 
   const [complaint] = await db
-    .select({
-      id: complaintsTable.id,
-      ticketId: complaintsTable.ticketId,
-      userId: complaintsTable.userId,
-      category: complaintsTable.category,
-      title: complaintsTable.title,
-      description: complaintsTable.description,
-      status: complaintsTable.status,
-      priority: complaintsTable.priority,
-      location: complaintsTable.location,
-      phone: complaintsTable.phone,
-      imageUrl: complaintsTable.imageUrl,
-      createdAt: complaintsTable.createdAt,
-      updatedAt: complaintsTable.updatedAt,
-      username: usersTable.username,
-    })
+    .select(COMPLAINT_FIELDS)
     .from(complaintsTable)
     .leftJoin(usersTable, eq(complaintsTable.userId, usersTable.id))
     .where(eq(complaintsTable.id, params.data.id));
@@ -196,19 +172,12 @@ router.get("/complaints/:id", requireAuth, async (req: AuthRequest, res): Promis
   }
 
   if (req.user!.role !== "admin" && complaint.userId !== req.user!.id) {
-    res.status(403).json({ error: "Forbidden" });
+    res.status(403).json({ error: "Access denied" });
     return;
   }
 
   const comments = await db
-    .select({
-      id: commentsTable.id,
-      complaintId: commentsTable.complaintId,
-      adminId: commentsTable.adminId,
-      comment: commentsTable.comment,
-      createdAt: commentsTable.createdAt,
-      adminUsername: usersTable.username,
-    })
+    .select(COMMENT_FIELDS)
     .from(commentsTable)
     .leftJoin(usersTable, eq(commentsTable.adminId, usersTable.id))
     .where(eq(commentsTable.complaintId, params.data.id))
@@ -219,19 +188,19 @@ router.get("/complaints/:id", requireAuth, async (req: AuthRequest, res): Promis
 
 router.patch("/complaints/:id", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   if (req.user!.role !== "admin") {
-    res.status(403).json({ error: "Forbidden: admin only" });
+    res.status(403).json({ error: "Admin access required" });
     return;
   }
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = UpdateComplaintParams.safeParse({ id: parseInt(raw, 10) });
   if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+    res.status(400).json({ error: "Invalid complaint ID" });
     return;
   }
 
   const body = UpdateComplaintBody.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: body.error.message });
+    res.status(400).json({ error: "Invalid request body" });
     return;
   }
 
@@ -246,23 +215,31 @@ router.patch("/complaints/:id", requireAuth, async (req: AuthRequest, res): Prom
     return;
   }
 
-  const user = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, updated.userId));
-  res.json({ ...updated, username: user[0]?.username ?? null });
+  const [user] = await db
+    .select({ username: usersTable.username })
+    .from(usersTable)
+    .where(eq(usersTable.id, updated.userId));
+
+  res.json({ ...updated, username: user?.username ?? null });
 });
 
 router.delete("/complaints/:id", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   if (req.user!.role !== "admin") {
-    res.status(403).json({ error: "Forbidden: admin only" });
+    res.status(403).json({ error: "Admin access required" });
     return;
   }
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = DeleteComplaintParams.safeParse({ id: parseInt(raw, 10) });
   if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+    res.status(400).json({ error: "Invalid complaint ID" });
     return;
   }
 
-  const [deleted] = await db.delete(complaintsTable).where(eq(complaintsTable.id, params.data.id)).returning();
+  const [deleted] = await db
+    .delete(complaintsTable)
+    .where(eq(complaintsTable.id, params.data.id))
+    .returning();
+
   if (!deleted) {
     res.status(404).json({ error: "Complaint not found" });
     return;

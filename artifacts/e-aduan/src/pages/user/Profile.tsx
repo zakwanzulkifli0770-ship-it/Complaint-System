@@ -42,7 +42,7 @@ export default function Profile() {
         onError: (error) => {
           toast({
             title: "Update failed",
-            description: error.data?.error || "An error occurred.",
+            description: (error.data as any)?.error || "An error occurred.",
             variant: "destructive",
           });
         },

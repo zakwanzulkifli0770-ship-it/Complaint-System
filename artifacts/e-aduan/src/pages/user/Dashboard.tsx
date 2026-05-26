@@ -11,14 +11,15 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LoadingState } from "@/components/shared/LoadingState";
+import { DashboardSkeleton } from "@/components/shared/Skeletons";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { StatusBadge, PriorityBadge } from "@/components/shared/Badges";
+import { PageHeader } from "@/components/shared/PageHeader";
 
 export default function Dashboard() {
   const { data, isLoading } = useGetUserDashboard();
 
-  if (isLoading) return <LoadingState message="Loading dashboard..." />;
+  if (isLoading) return <DashboardSkeleton />;
   if (!data) return null;
 
   const statCards = [
@@ -31,17 +32,17 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">Overview of your submitted complaints.</p>
-        </div>
-        <Link href="/complaints/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> New Complaint
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Overview of your submitted complaints."
+        action={
+          <Link href="/complaints/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> New Complaint
+            </Button>
+          </Link>
+        }
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {statCards.map((stat, i) => (
@@ -70,13 +71,13 @@ export default function Dashboard() {
               action={{ label: "Submit Complaint", onClick: () => window.location.href = "/complaints/new" }}
             />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {data.recentComplaints.map((complaint) => (
                 <div key={complaint.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
                   <div className="space-y-1 mb-3 sm:mb-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Link href={`/complaints/${complaint.id}`}>
-                        <span className="font-semibold text-primary hover:underline cursor-pointer">
+                        <span className="font-mono text-sm font-semibold text-primary hover:underline cursor-pointer">
                           {complaint.ticketId}
                         </span>
                       </Link>
@@ -84,7 +85,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-xs text-muted-foreground flex items-center gap-2">
                       <span>{format(new Date(complaint.createdAt), 'PP')}</span>
-                      <span>•</span>
+                      <span>·</span>
                       <span>{complaint.category}</span>
                     </div>
                   </div>

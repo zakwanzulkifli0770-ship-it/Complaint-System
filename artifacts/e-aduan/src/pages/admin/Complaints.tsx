@@ -3,48 +3,48 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { Search, MoreVertical, Trash2 } from "lucide-react";
 import { useListComplaints, useUpdateComplaint, useDeleteComplaint, getListComplaintsQueryKey } from "@workspace/api-client-react";
-type ComplaintStatus = "pending" | "in_progress" | "resolved" | "rejected" | "all";
-type ComplaintPriority = "low" | "medium" | "critical" | "all";
-type ComplaintUpdateStatus = "pending" | "in_progress" | "resolved" | "rejected";
-const ComplaintStatus = { pending: "pending", in_progress: "in_progress", resolved: "resolved", rejected: "rejected" } as const;
-const ComplaintPriority = { low: "low", medium: "medium", critical: "critical" } as const;
-const ComplaintUpdateStatus = { pending: "pending", in_progress: "in_progress", resolved: "resolved", rejected: "rejected" } as const;
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusBadge, PriorityBadge } from "@/components/shared/Badges";
-import { LoadingState } from "@/components/shared/LoadingState";
+import { TableSkeleton } from "@/components/shared/Skeletons";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useQueryClient } from "@tanstack/react-query";
+import { COMPLAINT_STATUSES, COMPLAINT_PRIORITIES } from "@/lib/constants";
+
+type StatusFilter = "all" | "pending" | "in_progress" | "resolved" | "rejected";
+type PriorityFilter = "all" | "low" | "medium" | "critical";
 
 export default function AdminComplaints() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<ComplaintStatus | "all">("all");
-  const [priority, setPriority] = useState<ComplaintPriority | "all">("all");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [priority, setPriority] = useState<PriorityFilter>("all");
   const [page, setPage] = useState(1);
   const limit = 15;
 
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
 
-  const queryParams = { 
-    page, 
-    limit, 
-    search: debouncedSearch || undefined, 
-    status: status === "all" ? undefined : status as any,
-    priority: priority === "all" ? undefined : priority as any
+  const queryParams = {
+    page,
+    limit,
+    search: debouncedSearch || undefined,
+    status: status === "all" ? undefined : (status as any),
+    priority: priority === "all" ? undefined : (priority as any),
   };
 
   const { data, isLoading } = useListComplaints(queryParams, { query: { keepPreviousData: true } as any });
-  
   const updateMutation = useUpdateComplaint();
   const deleteMutation = useDeleteComplaint();
 
-  const handleUpdateStatus = (id: number, newStatus: ComplaintUpdateStatus) => {
+  const handleUpdateStatus = (id: number, newStatus: "pending" | "in_progress" | "resolved" | "rejected") => {
     updateMutation.mutate(
       { id, data: { status: newStatus } },
       {
@@ -52,16 +52,12 @@ export default function AdminComplaints() {
           toast({ title: "Status updated" });
           queryClient.invalidateQueries({ queryKey: getListComplaintsQueryKey(queryParams) });
         },
-        onError: () => {
-          toast({ title: "Update failed", variant: "destructive" });
-        }
-      }
+        onError: () => toast({ title: "Update failed", variant: "destructive" }),
+      },
     );
   };
 
   const handleDelete = (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this complaint? This cannot be undone.")) return;
-    
     deleteMutation.mutate(
       { id },
       {
@@ -69,82 +65,72 @@ export default function AdminComplaints() {
           toast({ title: "Complaint deleted" });
           queryClient.invalidateQueries({ queryKey: getListComplaintsQueryKey(queryParams) });
         },
-        onError: () => {
-          toast({ title: "Delete failed", variant: "destructive" });
-        }
-      }
+        onError: () => toast({ title: "Delete failed", variant: "destructive" }),
+      },
     );
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Manage Complaints</h2>
-        <p className="text-muted-foreground">View, filter, and process all user complaints.</p>
-      </div>
+      <PageHeader
+        title="Manage Complaints"
+        description="View, filter, and process all user complaints."
+      />
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by ticket ID, title, or username..."
+                placeholder="Search by ticket ID, title, or category..."
                 className="pl-9"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setTimeout(() => setDebouncedSearch(e.target.value), 500);
-                }}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <div className="flex gap-4">
-              <div className="w-[160px]">
-                <Select value={priority} onValueChange={(val) => { setPriority(val as any); setPage(1); }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value={ComplaintPriority.low}>Low</SelectItem>
-                    <SelectItem value={ComplaintPriority.medium}>Medium</SelectItem>
-                    <SelectItem value={ComplaintPriority.critical}>Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-[160px]">
-                <Select value={status} onValueChange={(val) => { setStatus(val as any); setPage(1); }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value={ComplaintStatus.pending}>Pending</SelectItem>
-                    <SelectItem value={ComplaintStatus.in_progress}>In Progress</SelectItem>
-                    <SelectItem value={ComplaintStatus.resolved}>Resolved</SelectItem>
-                    <SelectItem value={ComplaintStatus.rejected}>Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex gap-3">
+              <Select value={priority} onValueChange={(v) => { setPriority(v as PriorityFilter); setPage(1); }}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  {COMPLAINT_PRIORITIES.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={status} onValueChange={(v) => { setStatus(v as StatusFilter); setPage(1); }}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  {COMPLAINT_STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading && !data ? (
-            <LoadingState />
+            <TableSkeleton rows={8} cols={6} />
           ) : !data || data.complaints.length === 0 ? (
-            <EmptyState 
+            <EmptyState
               title="No complaints found"
               description="No complaints match your current filters."
             />
           ) : (
             <div className="space-y-4">
-              <div className="border rounded-md overflow-hidden bg-card">
+              <div className="border rounded-md overflow-x-auto bg-card">
                 <table className="w-full text-sm text-left whitespace-nowrap">
                   <thead className="bg-muted/50 text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 font-medium">Ticket ID</th>
-                      <th className="px-4 py-3 font-medium w-full">Details</th>
+                      <th className="px-4 py-3 font-medium">Details</th>
                       <th className="px-4 py-3 font-medium">User</th>
                       <th className="px-4 py-3 font-medium">Priority</th>
                       <th className="px-4 py-3 font-medium">Status</th>
@@ -159,13 +145,11 @@ export default function AdminComplaints() {
                             {complaint.ticketId}
                           </Link>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-foreground truncate max-w-[200px] lg:max-w-[400px]">
-                            {complaint.title}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{complaint.category} • {format(new Date(complaint.createdAt), 'MMM d')}</div>
+                        <td className="px-4 py-3 max-w-[260px]">
+                          <div className="font-medium text-foreground truncate">{complaint.title}</div>
+                          <div className="text-xs text-muted-foreground">{complaint.category} · {format(new Date(complaint.createdAt), 'MMM d, yyyy')}</div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-muted-foreground">
                           {complaint.username || `User #${complaint.userId}`}
                         </td>
                         <td className="px-4 py-3">
@@ -188,27 +172,35 @@ export default function AdminComplaints() {
                                 <Link href={`/complaints/${complaint.id}`}>View Details</Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuLabel className="text-xs text-muted-foreground">Set Status</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(complaint.id, ComplaintUpdateStatus.pending)}>
+                              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Set Status</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(complaint.id, "pending")}>
                                 Mark Pending
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(complaint.id, ComplaintUpdateStatus.in_progress)}>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(complaint.id, "in_progress")}>
                                 Mark In Progress
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(complaint.id, ComplaintUpdateStatus.resolved)}>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(complaint.id, "resolved")}>
                                 Mark Resolved
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(complaint.id, ComplaintUpdateStatus.rejected)}>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(complaint.id, "rejected")}>
                                 Mark Rejected
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
-                                onClick={() => handleDelete(complaint.id)}
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
+                              <ConfirmDialog
+                                trigger={
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete Complaint
+                                  </DropdownMenuItem>
+                                }
+                                title="Delete complaint?"
+                                description={`This will permanently delete "${complaint.title}" (${complaint.ticketId}). This action cannot be undone.`}
+                                confirmLabel="Delete"
+                                onConfirm={() => handleDelete(complaint.id)}
+                              />
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -217,26 +209,16 @@ export default function AdminComplaints() {
                   </tbody>
                 </table>
               </div>
-              
-              <div className="flex items-center justify-between pt-4">
+
+              <div className="flex items-center justify-between pt-2">
                 <div className="text-sm text-muted-foreground">
-                  Showing {(page - 1) * limit + 1} to {Math.min(page * limit, data.total)} of {data.total} entries
+                  Showing {(page - 1) * limit + 1}–{Math.min(page * limit, data.total)} of {data.total} entries
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
                     Previous
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setPage(p => p + 1)}
-                    disabled={page * limit >= data.total}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page * limit >= data.total}>
                     Next
                   </Button>
                 </div>

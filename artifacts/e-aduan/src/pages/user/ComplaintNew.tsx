@@ -4,35 +4,28 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useCreateComplaint } from "@workspace/api-client-react";
-type ComplaintInputPriority = "low" | "medium" | "critical";
-const ComplaintInputPriority = { low: "low", medium: "medium", critical: "critical" } as const;
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-const categories = [
-  "Kemudahan Awam",
-  "Keselamatan",
-  "Kebersihan",
-  "Infrastruktur",
-  "Perkhidmatan",
-  "Lain-lain"
-];
+import { PageHeader } from "@/components/shared/PageHeader";
+import { COMPLAINT_CATEGORIES, COMPLAINT_PRIORITIES } from "@/lib/constants";
 
 const complaintSchema = z.object({
   category: z.string().min(1, { message: "Category is required" }),
   title: z.string().min(5, { message: "Title must be at least 5 characters" }),
   description: z.string().min(10, { message: "Description must be at least 10 characters" }),
-  priority: z.nativeEnum(ComplaintInputPriority),
+  priority: z.enum(["low", "medium", "critical"]),
   location: z.string().optional(),
   phone: z.string().optional(),
   imageUrl: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal("")),
 });
+
+type ComplaintFormValues = z.infer<typeof complaintSchema>;
 
 export default function ComplaintNew() {
   const [, setLocation] = useLocation();
@@ -40,21 +33,20 @@ export default function ComplaintNew() {
   const createComplaintMutation = useCreateComplaint();
   const [successTicketId, setSuccessTicketId] = useState<string | null>(null);
 
-  const form = useForm<z.infer<typeof complaintSchema>>({
+  const form = useForm<ComplaintFormValues>({
     resolver: zodResolver(complaintSchema),
     defaultValues: {
       category: "",
       title: "",
       description: "",
-      priority: ComplaintInputPriority.low,
+      priority: "medium",
       location: "",
       phone: "",
       imageUrl: "",
     },
   });
 
-  const onSubmit = (values: z.infer<typeof complaintSchema>) => {
-    // Clean up empty strings
+  const onSubmit = (values: ComplaintFormValues) => {
     const payload = {
       ...values,
       location: values.location || undefined,
@@ -75,22 +67,21 @@ export default function ComplaintNew() {
             variant: "destructive",
           });
         },
-      }
+      },
     );
   };
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Submit New Complaint</h2>
-        <p className="text-muted-foreground">Fill out the form below to report an issue.</p>
-      </div>
+      <PageHeader
+        title="Submit New Complaint"
+        description="Fill out the form below to report an issue."
+      />
 
       <Card>
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -105,7 +96,7 @@ export default function ComplaintNew() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {categories.map((cat) => (
+                          {COMPLAINT_CATEGORIES.map((cat) => (
                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                           ))}
                         </SelectContent>
@@ -128,9 +119,9 @@ export default function ComplaintNew() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={ComplaintInputPriority.low}>Rendah (Low)</SelectItem>
-                          <SelectItem value={ComplaintInputPriority.medium}>Sederhana (Medium)</SelectItem>
-                          <SelectItem value={ComplaintInputPriority.critical}>Kritikal (Critical)</SelectItem>
+                          {COMPLAINT_PRIORITIES.map((p) => (
+                            <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -160,10 +151,10 @@ export default function ComplaintNew() {
                   <FormItem>
                     <FormLabel>Detailed Description *</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Provide as much detail as possible..." 
-                        className="min-h-[120px]" 
-                        {...field} 
+                      <Textarea
+                        placeholder="Provide as much detail as possible..."
+                        className="min-h-[120px]"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -216,7 +207,7 @@ export default function ComplaintNew() {
                 )}
               />
 
-              <div className="flex justify-end gap-4 pt-4 border-t">
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={() => setLocation("/dashboard")}>
                   Cancel
                 </Button>
@@ -235,23 +226,23 @@ export default function ComplaintNew() {
           setLocation("/complaints");
         }
       }}>
-        <DialogContent className="sm:max-w-md text-center">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-center text-primary mb-2">Complaint Submitted</DialogTitle>
-            <DialogDescription className="text-center text-base">
+            <DialogTitle className="text-2xl text-center text-primary mb-1">Complaint Submitted</DialogTitle>
+            <DialogDescription className="text-center">
               Your complaint has been successfully recorded.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="my-6 p-6 bg-muted rounded-lg border border-border">
-            <div className="text-sm text-muted-foreground uppercase tracking-wider font-semibold mb-2">Your Ticket Number</div>
-            <div className="text-3xl font-mono font-bold tracking-tighter text-foreground">{successTicketId}</div>
+
+          <div className="my-4 p-6 bg-muted rounded-lg border border-border text-center">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Your Ticket Number</div>
+            <div className="text-3xl font-mono font-bold tracking-tight text-foreground">{successTicketId}</div>
           </div>
-          
-          <DialogDescription className="text-center mb-6">
-            Please save this ticket number. You can use it to track the status of your complaint on the public tracker.
-          </DialogDescription>
-          
+
+          <p className="text-sm text-center text-muted-foreground mb-2">
+            Save this number to track your complaint on the public tracker.
+          </p>
+
           <DialogFooter className="sm:justify-center">
             <Button onClick={() => setLocation("/complaints")} className="w-full sm:w-auto">
               View My Complaints
