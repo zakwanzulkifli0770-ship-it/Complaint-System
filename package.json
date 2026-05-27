@@ -5,7 +5,7 @@
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "dev": "vite --config artifacts/e-aduan/vite.config.ts --host 0.0.0.0",
-    "build": "pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/e-aduan run build",
+    "build": "pnpm -r --filter=!@workspace/mockup-sandbox --if-present run build",
     "start": "node server.js",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
